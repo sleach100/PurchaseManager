@@ -1,0 +1,12 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2024/07/25 22:22:01.000.715,=C:\Users\Stever Leach\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/09/06 15:24:14.000.978,=C:\Users\Stever Leach\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas</Transaction>
+    <Transaction>2025/09/06 15:24:42.000.704,C:\Users\Stever Leach\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.pas=C:\Purchase Manager\Unit1.pas</Transaction>
+    <Transaction>2025/09/06 15:24:42.000.704,C:\Users\Stever Leach\OneDrive\Documents\Embarcadero\Studio\Projects\Unit1.dfm=C:\Purchase Manager\Unit1.dfm</Transaction>
+    <Transaction>2025/09/06 15:24:54.000.852,C:\Users\Stever Leach\OneDrive\Documents\Embarcadero\Studio\Projects\Project1.dproj=C:\Purchase Manager\PurchaseMgr.dproj</Transaction>
+    <Transaction>2025/09/13 13:04:54.000.647,=C:\Purchase Manager\Unit2.pas</Transaction>
+    <Transaction>2025/09/13 13:05:31.000.549,C:\Purchase Manager\Unit2.pas=C:\Purchase Manager\ForceRegisterVCL.pas</Transaction>
+  </Transactions>
+</BorlandProject>

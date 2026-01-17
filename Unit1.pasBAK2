@@ -1,0 +1,348 @@
+unit Unit1;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages,
+  System.SysUtils, System.Variants, System.Classes, System.Types,
+  System.DateUtils,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
+  Vcl.Grids, Vcl.DBGrids, Vcl.ComCtrls,
+  Data.DB,
+  FireDAC.Comp.Client, FireDAC.Comp.DataSet;
+
+type
+  // Crack class to access protected grid members (Col, Row, CellRect)
+  TDBGridCrack = class(TDBGrid);
+
+type
+  TForm1 = class(TForm)
+    DBGrid1: TDBGrid;
+    dsPurchases: TDataSource;
+    qPurchases: TFDQuery;
+    procedure FormCreate(Sender: TObject);
+    procedure FormDestroy(Sender: TObject);
+    // Grid events to manage the overlay picker
+    procedure DBGrid1ColEnter(Sender: TObject);
+    procedure DBGrid1CellClick(Column: TColumn);
+    procedure DBGrid1Exit(Sender: TObject);
+    procedure DBGrid1KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+    procedure DBGrid1MouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+  private
+    DTP: TDateTimePicker;
+    FShowingDTP: Boolean;
+    function IsDateCol: Boolean;
+    procedure ShowDTPOverCell;
+    procedure HideDTP;
+    // Helpers for robust date-only parsing/formatting (no locale, no TZ)
+    function ParseISODate(const S: string; out D: TDateTime): Boolean;
+    function ISOOf(const D: TDateTime): string;
+    // Dataset field event handlers for "Date" field
+    procedure PurchasesDateGetText(Sender: TField; var Text: string; DisplayText: Boolean);
+    procedure PurchasesDateSetText(Sender: TField; const Text: string);
+    // Dataset movement -> hide picker
+    procedure DatasetAfterScroll(DataSet: TDataSet);
+    // Picker events
+    procedure DTPChange(Sender: TObject);
+    procedure DTPExit(Sender: TObject);
+    procedure DTPKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+  public
+    { Public declarations }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+{ ==== Small, safe helpers ================================================== }
+
+function TForm1.ParseISODate(const S: string; out D: TDateTime): Boolean;
+var
+  Y, M, Day: Integer;
+  S1: string;
+begin
+  // Accept strictly 'YYYY-MM-DD'
+  S1 := Trim(S);
+  Result := False;
+  if (Length(S1) >= 10) and (S1[5] = '-') and (S1[8] = '-') then
+  begin
+    if TryStrToInt(Copy(S1, 1, 4), Y)
+    and TryStrToInt(Copy(S1, 6, 2), M)
+    and TryStrToInt(Copy(S1, 9, 2), Day)
+    and TryEncodeDate(Y, M, Day, D) then
+    begin
+      D := DateOf(D);
+      Exit(True);
+    end;
+  end;
+end;
+
+function TForm1.ISOOf(const D: TDateTime): string;
+begin
+  Result := FormatDateTime('yyyy-mm-dd', DateOf(D)); // pure date, no time
+end;
+
+{ ==== Picker plumbing ======================================================= }
+
+function TForm1.IsDateCol: Boolean;
+begin
+  Result := Assigned(DBGrid1) and Assigned(DBGrid1.SelectedField)
+    and SameText(DBGrid1.SelectedField.FieldName, 'Date');
+end;
+
+procedure TForm1.ShowDTPOverCell;
+var
+  R: TRect;
+  S: string;
+  V: TDateTime;
+  G: TDBGridCrack;
+begin
+  if not IsDateCol then
+  begin
+    HideDTP;
+    Exit;
+  end;
+
+  if not Assigned(DTP) then
+    Exit;
+
+  // Position over current cell
+  G := TDBGridCrack(DBGrid1);
+  R := G.CellRect(G.Col, G.Row);
+  if IsRectEmpty(R) then
+  begin
+    HideDTP;
+    Exit;
+  end;
+
+  // Parent inside the grid so coordinates match
+  if DTP.Parent <> DBGrid1 then
+    DTP.Parent := DBGrid1;
+
+  InflateRect(R, -2, -2);
+  DTP.SetBounds(R.Left, R.Top, R.Width, R.Height);
+
+  // Seed from dataset (strict ISO parse; if blank, use today)
+  S := DBGrid1.SelectedField.AsString;
+  if not ParseISODate(S, V) then
+    V := Date;
+
+  // Avoid triggering OnChange noise while seeding
+  DTP.OnChange := nil;
+  try
+    DTP.Date := V;
+  finally
+    DTP.OnChange := DTPChange;
+  end;
+
+  DTP.Visible := True;
+  DTP.BringToFront;
+  DTP.SetFocus;
+  FShowingDTP := True;
+end;
+
+procedure TForm1.HideDTP;
+begin
+  if Assigned(DTP) then
+  begin
+    DTP.Visible := False;
+    FShowingDTP := False;
+  end;
+end;
+
+procedure TForm1.DTPChange(Sender: TObject);
+var
+  F: TField;
+  SaveSetText: TFieldSetTextEvent;
+begin
+  if not IsDateCol then Exit;
+  if not Assigned(DBGrid1.SelectedField) then Exit;
+
+  // Ensure dataset is in edit/insert
+  if DBGrid1.DataSource.DataSet.State = dsBrowse then
+    DBGrid1.DataSource.DataSet.Edit;
+
+  F := DBGrid1.SelectedField;
+
+  // Bypass OnSetText to prevent any re-parsing or locale/TZ changes
+  SaveSetText := F.OnSetText;
+  F.OnSetText := nil;
+  try
+    F.AsString := ISOOf(DTP.Date); // exact ISO storage
+  finally
+    F.OnSetText := SaveSetText;
+  end;
+end;
+
+procedure TForm1.DTPExit(Sender: TObject);
+begin
+  HideDTP;
+end;
+
+procedure TForm1.DTPKeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  case Key of
+    VK_RETURN, VK_TAB:
+      begin
+        // Commit current value
+        DTPChange(Sender);
+        HideDTP;
+        // Let the grid handle navigation
+      end;
+    VK_ESCAPE:
+      begin
+        HideDTP;
+      end;
+  end;
+end;
+
+{ ==== Dataset field handlers =============================================== }
+
+procedure TForm1.PurchasesDateGetText(Sender: TField; var Text: string; DisplayText: Boolean);
+var
+  D: TDateTime;
+begin
+  if DisplayText and ParseISODate(Sender.AsString, D) then
+    Text := FormatDateTime('mm/dd/yyyy', D)
+  else
+    Text := Sender.AsString; // keep raw for non-display paths
+end;
+
+procedure TForm1.PurchasesDateSetText(Sender: TField; const Text: string);
+var
+  D: TDateTime;
+  S: string;
+  mm, dd, yy: Integer;
+begin
+  S := Trim(Text);
+  if S = '' then
+  begin
+    Sender.Clear;
+    Exit;
+  end;
+
+  // If already ISO-like (yyyy-mm-dd), keep strictly as ISO
+  if ParseISODate(S, D) then
+  begin
+    Sender.AsString := ISOOf(D);
+    Exit;
+  end;
+
+  // Accept common user format mm/dd/yyyy (manual parse to avoid locale)
+  if (Length(S) >= 10) and (S[3] = '/') and (S[6] = '/') then
+  begin
+    if TryStrToInt(Copy(S, 1, 2), mm)
+    and TryStrToInt(Copy(S, 4, 2), dd)
+    and TryStrToInt(Copy(S, 7, 4), yy)
+    and TryEncodeDate(yy, mm, dd, D) then
+    begin
+      Sender.AsString := ISOOf(D);
+      Exit;
+    end;
+  end;
+
+  // Last attempt: strict ISO parse again (tolerates incidental spaces)
+  if ParseISODate(S, D) then
+  begin
+    Sender.AsString := ISOOf(D);
+    Exit;
+  end;
+
+  raise Exception.CreateFmt('Invalid date: %s', [S]);
+end;
+
+{ ==== Dataset movement hooks ============================================== }
+
+procedure TForm1.DatasetAfterScroll(DataSet: TDataSet);
+begin
+  HideDTP;
+end;
+
+{ ==== Grid event handlers ================================================== }
+
+procedure TForm1.DBGrid1CellClick(Column: TColumn);
+begin
+  if IsDateCol then
+    ShowDTPOverCell
+  else
+    HideDTP;
+end;
+
+procedure TForm1.DBGrid1ColEnter(Sender: TObject);
+begin
+  if IsDateCol then
+    ShowDTPOverCell
+  else
+    HideDTP;
+end;
+
+procedure TForm1.DBGrid1Exit(Sender: TObject);
+begin
+  HideDTP;
+end;
+
+procedure TForm1.DBGrid1KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
+begin
+  // Any navigation/scrolling should hide the picker;
+  // Enter/F2 on Date col should show it
+  case Key of
+    VK_PRIOR, VK_NEXT, VK_UP, VK_DOWN, VK_LEFT, VK_RIGHT, VK_HOME, VK_END:
+      HideDTP;
+    VK_F2, VK_RETURN:
+      if IsDateCol then
+        ShowDTPOverCell;
+  end;
+end;
+
+procedure TForm1.DBGrid1MouseWheel(Sender: TObject; Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint; var Handled: Boolean);
+begin
+  HideDTP;
+end;
+
+{ ==== Form lifecycle ======================================================== }
+
+procedure TForm1.FormCreate(Sender: TObject);
+var
+  F: TField;
+begin
+  // Create the overlay date picker
+  DTP := TDateTimePicker.Create(Self);
+  DTP.Visible := False;
+  DTP.Parent := DBGrid1; // keep in grid coordinates
+  DTP.Kind := dtkDate;
+  DTP.DateFormat := dfShort;
+  DTP.Format := 'MM/dd/yyyy'; // Windows format tokens (lowercase d & y)
+  DTP.OnChange := DTPChange;
+  DTP.OnExit := DTPExit;
+  DTP.OnKeyDown := DTPKeyDown;
+  FShowingDTP := False;
+
+  // Hook dataset scroll to hide the picker
+  if Assigned(dsPurchases) and Assigned(dsPurchases.DataSet) then
+    dsPurchases.DataSet.AfterScroll := DatasetAfterScroll
+  else if Assigned(qPurchases) then
+    qPurchases.AfterScroll := DatasetAfterScroll;
+
+  // Attach field handlers for "Date" column if field exists now;
+  // if fields are created later (persistent fields), this is harmless.
+  if Assigned(dsPurchases) and Assigned(dsPurchases.DataSet) then
+    F := dsPurchases.DataSet.FindField('Date')
+  else
+    F := qPurchases.FindField('Date');
+
+  if Assigned(F) then
+  begin
+    F.OnGetText := PurchasesDateGetText;
+    F.OnSetText := PurchasesDateSetText;
+  end;
+end;
+
+procedure TForm1.FormDestroy(Sender: TObject);
+begin
+  // Nothing special; DTP owned by form
+end;
+
+end.
