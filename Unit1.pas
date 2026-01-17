@@ -343,6 +343,9 @@ begin
   VendorIndex := VendorList.Items.IndexOf(SearchVendor);
   if VendorIndex >= 0 then
   begin
+    // Force vendor selection change by clearing first, then setting
+    // This ensures the filter is initiated even if clicking the first/same item
+    VendorList.ItemIndex := -1;
     VendorList.ItemIndex := VendorIndex;
 
     // Trigger VendorListClick to load purchases for this vendor
