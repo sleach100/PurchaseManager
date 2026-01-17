@@ -343,18 +343,33 @@ begin
   VendorIndex := VendorList.Items.IndexOf(SearchVendor);
   if VendorIndex >= 0 then
   begin
-    // Force vendor selection change by clearing first, then setting
-    // This ensures the filter is initiated even if clicking the first/same item
-    VendorList.ItemIndex := -1;
+    // Set the vendor selection
     VendorList.ItemIndex := VendorIndex;
 
-    // Trigger VendorListClick to load purchases for this vendor
-    VendorListClick(VendorList);
+    // Call Button2Click directly to reload purchases for this vendor
+    Button2Click(VendorList);
 
-    // Now locate the product in DBGrid1/qPurchases
-    if qPurchases.Active and (not qPurchases.IsEmpty) then
+    // Handle history grid like VendorListClick does
+    if qPurchases.IsEmpty then
     begin
-      qPurchases.Locate('Product', SearchProduct, []);
+      qPurchaseHistory.Close;
+      qPurchaseHistory.SQL.Text := 'SELECT * FROM Purchases WHERE 1 = 0;';
+      qPurchaseHistory.Open;
+      DBGrid2.Refresh;
+    end
+    else
+    begin
+      // Locate the product in DBGrid1/qPurchases and populate history
+      if qPurchases.Active and (not qPurchases.IsEmpty) then
+      begin
+        qPurchases.First; // Start from beginning
+        if qPurchases.Locate('Product', SearchProduct, []) then
+        begin
+          // Successfully located - populate history for this product
+          PopulateHistoryClick(Column);
+          DBGrid1.SetFocus;
+        end;
+      end;
     end;
   end
   else
