@@ -129,6 +129,8 @@ type
     procedure DBGrid1ColEnter(Sender: TObject);
     procedure DBGrid1ColExit(Sender: TObject);
     procedure DBGrid1Exit(Sender: TObject);
+    procedure DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
+      DataCol: Integer; Column: TColumn; State: TGridDrawState);
     procedure qPurchaseHistoryDateSetText(Sender: TField; const Text: string);
     procedure qPurchasesAfterOpen(DataSet: TDataSet);
     procedure qPurchasesDateSetText(Sender: TField; const Text: string);
@@ -406,6 +408,20 @@ end;
 procedure TForm1.DBGrid1Exit(Sender: TObject);
 begin
 HideDTP;
+end;
+
+procedure TForm1.DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
+  DataCol: Integer; Column: TColumn; State: TGridDrawState);
+begin
+  // Highlight the selected row with light yellow
+  if (gdSelected in State) then
+  begin
+    DBGrid1.Canvas.Brush.Color := $00E0FFFF;  // Light yellow (BGR format)
+    DBGrid1.Canvas.FillRect(Rect);
+  end;
+
+  // Draw the cell text
+  DBGrid1.DefaultDrawColumnCell(Rect, DataCol, Column, State);
 end;
 
 procedure TForm1.DBGrid1KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
