@@ -470,6 +470,8 @@ object Form1: TForm1
     DataSource = DataSource3
     ReadOnly = True
     TabOrder = 11
+    OnCellClick = DBGrid3CellClick
+    OnEnter = DBGrid3Enter
     TitleFont.Charset = DEFAULT_CHARSET
     TitleFont.Color = clWindowText
     TitleFont.Height = -11

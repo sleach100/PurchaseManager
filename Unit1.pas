@@ -106,6 +106,8 @@ type
     procedure FormCreate(Sender: TObject);
     procedure PopulateHistoryClick(Sender: TObject);
     procedure DBGrid1CellClick(Column: TColumn);
+    procedure DBGrid3CellClick(Column: TColumn);
+    procedure DBGrid3Enter(Sender: TObject);
     function PromptForPrice(const ACaption, APrompt: string; out AValue: Double): Boolean;
     procedure UpdatePriceClick(Sender: TObject);
     procedure Button3Click(Sender: TObject);
@@ -299,7 +301,7 @@ begin
     raise;
   end;
 
-  // Reflect in the listbox, if you’re showing vendors there
+  // Reflect in the listbox, if youï¿½re showing vendors there
   if Assigned(VendorList) then
   begin
     if VendorList.Items.IndexOf(NewName) < 0 then
@@ -323,6 +325,66 @@ if (not DBGrid1.DataSource.DataSet.Active) or DBGrid1.DataSource.DataSet.IsEmpty
 else
   PopulateHistoryClick(Column);//Populate the History Grid with Historical Prices
  ShowDTPOverCell; // Show Date Picker over Date Cell
+end;
+
+procedure TForm1.DBGrid3CellClick(Column: TColumn);
+var
+  SearchVendor, SearchProduct: string;
+  VendorIndex: Integer;
+begin
+  // Make sure qSearch has data
+  if (not qSearch.Active) or qSearch.IsEmpty then
+    Exit;
+
+  // Get the Vendor and Product from the current row in DBGrid3/qSearch
+  SearchVendor := qSearch.FieldByName('Vendor').AsString;
+  SearchProduct := qSearch.FieldByName('Product').AsString;
+
+  // Find and select the vendor in VendorList
+  VendorIndex := VendorList.Items.IndexOf(SearchVendor);
+  if VendorIndex >= 0 then
+  begin
+    // Set the vendor selection
+    VendorList.ItemIndex := VendorIndex;
+
+    // Call Button2Click directly to reload purchases for this vendor
+    Button2Click(VendorList);
+
+    // Handle history grid like VendorListClick does
+    if qPurchases.IsEmpty then
+    begin
+      qPurchaseHistory.Close;
+      qPurchaseHistory.SQL.Text := 'SELECT * FROM Purchases WHERE 1 = 0;';
+      qPurchaseHistory.Open;
+      DBGrid2.Refresh;
+    end
+    else
+    begin
+      // Locate the product in DBGrid1/qPurchases and populate history
+      if qPurchases.Active and (not qPurchases.IsEmpty) then
+      begin
+        qPurchases.First; // Start from beginning
+        if qPurchases.Locate('Product', SearchProduct, []) then
+        begin
+          // Successfully located - populate history for this product
+          PopulateHistoryClick(Column);
+          // Don't call SetFocus - let user stay in DBGrid3 to select other items
+        end;
+      end;
+    end;
+  end
+  else
+  begin
+    ShowMessage('Vendor "' + SearchVendor + '" not found in vendor list.');
+  end;
+end;
+
+procedure TForm1.DBGrid3Enter(Sender: TObject);
+begin
+  // When entering DBGrid3, automatically sync the currently selected row
+  // This handles the case where the first item is already selected
+  if (qSearch.Active) and (not qSearch.IsEmpty) then
+    DBGrid3CellClick(nil);
 end;
 
 procedure TForm1.DBGrid1ColEnter(Sender: TObject);
@@ -376,11 +438,11 @@ begin
     if ItemExists(v, p, u, c, curID) then
     begin
       ShowMessage('Item already exists');
-      Key := 0;   // swallow Enter (don’t post)
+      Key := 0;   // swallow Enter (donï¿½t post)
       Abort;      // stay in edit on current row
     end;
 
-    // looks good — commit the edit
+    // looks good ï¿½ commit the edit
     qPurchases.Post;
     Key := 0;     // prevent the grid from also moving to next row
   end;
@@ -447,14 +509,14 @@ FDConnection1.Params.Values['BusyTimeout'] := '60000';    // wait up to 60s
 // Create Timer thats sets Date Picker to select MM
 FDTPSelTimer := TTimer.Create(Self);
 FDTPSelTimer.Enabled  := False;
-FDTPSelTimer.Interval := 120;          // small defer; 20–50ms works well
+FDTPSelTimer.Interval := 120;          // small defer; 20ï¿½50ms works well
 FDTPSelTimer.OnTimer  := DTPSelectMonthTimer;
 
 // Choose either WAL (better concurrency) or DELETE (simpler). Try WAL first:
 FDConnection1.Params.Values['JournalMode'] := 'WAL';
 FDConnection1.Params.Values['Synchronous'] := 'NORMAL';
 
-// If the DB still won’t open, temporarily force DELETE to clear things:
+// If the DB still wonï¿½t open, temporarily force DELETE to clear things:
 //FDConnection1.Params.Values['JournalMode'] := 'DELETE';
 
 FDConnection1.LoginPrompt := False;
@@ -628,7 +690,7 @@ begin
   if Assigned(F) then
   begin
     F.OnGetText := qVendorDateGetText; // keep your -1 day display hack inside
-    F.OnSetText := qPurchasesDateSetText; // keep whatever you’ve got there
+    F.OnSetText := qPurchasesDateSetText; // keep whatever youï¿½ve got there
   end;
 end;
 
@@ -701,7 +763,7 @@ begin
 
   if DisplayText and TryISO8601ToDate(raw, dt, False) then
   begin
-    dt := IncDay(DateOf(dt), -1);                 // <— HACK: force -1 day for display
+    dt := IncDay(DateOf(dt), -1);                 // <ï¿½ HACK: force -1 day for display
     Text := FormatDateTime('mm/dd/yyyy', dt);
   end
   else
@@ -764,8 +826,8 @@ begin
           f := QPurchases.FieldByName(names[i]);
           if f.Calculated or f.Lookup or f.ReadOnly then Continue;
           if SameText(f.FieldName, 'KeyID') then Continue;   // autoinc
-          if SameText(f.FieldName, 'Price') then Continue;   // we’ll override
-          if SameText(f.FieldName, 'Date') then Continue;    // we’ll override
+          if SameText(f.FieldName, 'Price') then Continue;   // weï¿½ll override
+          if SameText(f.FieldName, 'Date') then Continue;    // weï¿½ll override
           f.Value := values[i];
         end;
 
@@ -1139,7 +1201,7 @@ begin
 
    S := qPurchases.FieldByName('Date').AsString;
   if TryISO8601ToDate(S, V, False) then
-    V := IncDay(DateOf(V), -1)                    // <— HACK: force -1 day for the picker
+    V := IncDay(DateOf(V), -1)                    // <ï¿½ HACK: force -1 day for the picker
   else
     V := Date;
 
@@ -1182,7 +1244,7 @@ begin
   F := qPurchases.FieldByName('Date');
 
   SaveHandler := F.OnSetText;
-  F.OnSetText := nil;              // nothing “helpful” touches the value
+  F.OnSetText := nil;              // nothing ï¿½helpfulï¿½ touches the value
   try
     // take the picker's date and add TWO days (quick & dirty offset)
     d := IncDay(DateOf(DTP.Date), +2);
@@ -1310,7 +1372,7 @@ begin
        if State in [dsInsert, dsEdit] then
         Cancel;  // <-- this is the missing piece
 
-       // 3) Return focus to grid and reselect Date (if it’s still there)
+       // 3) Return focus to grid and reselect Date (if itï¿½s still there)
        DBGrid1.SetFocus;
        if Assigned(qPurchases.FindField('Date')) then
         DBGrid1.SelectedField := qPurchases.FieldByName('Date');
