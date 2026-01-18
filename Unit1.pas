@@ -107,6 +107,7 @@ type
     procedure PopulateHistoryClick(Sender: TObject);
     procedure DBGrid1CellClick(Column: TColumn);
     procedure DBGrid3CellClick(Column: TColumn);
+    procedure DBGrid3Enter(Sender: TObject);
     function PromptForPrice(const ACaption, APrompt: string; out AValue: Double): Boolean;
     procedure UpdatePriceClick(Sender: TObject);
     procedure Button3Click(Sender: TObject);
@@ -376,6 +377,14 @@ begin
   begin
     ShowMessage('Vendor "' + SearchVendor + '" not found in vendor list.');
   end;
+end;
+
+procedure TForm1.DBGrid3Enter(Sender: TObject);
+begin
+  // When entering DBGrid3, automatically sync the currently selected row
+  // This handles the case where the first item is already selected
+  if (qSearch.Active) and (not qSearch.IsEmpty) then
+    DBGrid3CellClick(nil);
 end;
 
 procedure TForm1.DBGrid1ColEnter(Sender: TObject);
