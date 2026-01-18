@@ -417,12 +417,15 @@ end;
 procedure TForm1.DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
   DataCol: Integer; Column: TColumn; State: TGridDrawState);
 var
+  SelectedCellRect: TRect;
   IsSelectedRow: Boolean;
 begin
-  // Determine if this cell is in the selected row
-  // Since dgRowSelect is not enabled, gdSelected only applies to the focused cell
-  // gdFocused indicates cells in the row that has focus
-  IsSelectedRow := (gdSelected in State) or (gdFocused in State);
+  // Get the rectangle of the currently selected cell
+  SelectedCellRect := DBGrid1.CellRect(DBGrid1.Col, TDBGridHack(DBGrid1).Row);
+
+  // Check if the cell being drawn is in the same row as the selected cell
+  // All cells in the same row have the same Top coordinate
+  IsSelectedRow := (Rect.Top = SelectedCellRect.Top);
 
   // Highlight all cells in the selected row with light yellow
   if IsSelectedRow then
