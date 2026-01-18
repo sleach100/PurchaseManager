@@ -613,6 +613,7 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     TabOrder = 0
+    Options = [dgTitles, dgIndicator, dgColumnResize, dgColLines, dgRowLines, dgTabs, dgConfirmDelete, dgCancelOnExit, dgRowSelect]
     TitleFont.Charset = DEFAULT_CHARSET
     TitleFont.Color = clWindowText
     TitleFont.Height = -13

@@ -19,6 +19,7 @@ uses
   TDBGridHack = class(TDBGrid)
   public
     property ScrollBars;
+    property Row;
   end;
 
   const
@@ -413,14 +414,18 @@ end;
 procedure TForm1.DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
   DataCol: Integer; Column: TColumn; State: TGridDrawState);
 begin
-  // Highlight the selected row with light yellow
-  if (gdSelected in State) then
+  // Highlight all cells in the selected row with light yellow
+  if (gdSelected in State) or (gdFocused in State) then
   begin
+    // Set background to light yellow
     DBGrid1.Canvas.Brush.Color := $00E0FFFF;  // Light yellow (BGR format)
-    DBGrid1.Canvas.FillRect(Rect);
+    DBGrid1.Canvas.Font.Color := clBlack;
+
+    // Remove the default selection state to prevent default blue highlighting
+    State := State - [gdSelected];
   end;
 
-  // Draw the cell text
+  // Draw the cell text with our custom colors
   DBGrid1.DefaultDrawColumnCell(Rect, DataCol, Column, State);
 end;
 
