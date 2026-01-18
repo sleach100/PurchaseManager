@@ -20,6 +20,7 @@ uses
   public
     property ScrollBars;
     property Row;
+    property Col;
     property DefaultRowHeight;
   end;
 
@@ -372,6 +373,8 @@ begin
         begin
           // Successfully located - populate history for this product
           PopulateHistoryClick(Column);
+          // Force DBGrid1 to redraw with the new selection highlighted
+          DBGrid1.Invalidate;
           // Don't call SetFocus - let user stay in DBGrid3 to select other items
         end;
       end;
@@ -415,18 +418,18 @@ end;
 procedure TForm1.DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
   DataCol: Integer; Column: TColumn; State: TGridDrawState);
 var
-  CurrentGridRow: Integer;
-  DrawnGridRow: Integer;
+  SelectedCellRect: TRect;
+  IsSelectedRow: Boolean;
 begin
-  // Get the current selected row (grid row, not data row)
-  CurrentGridRow := TDBGridHack(DBGrid1).Row;
+  // Get the rectangle of the currently selected cell using TDBGridHack to access protected members
+  SelectedCellRect := TDBGridHack(DBGrid1).CellRect(TDBGridHack(DBGrid1).Col, TDBGridHack(DBGrid1).Row);
 
-  // Calculate which grid row is being drawn
-  // This works by dividing the top position by row height
-  DrawnGridRow := Rect.Top div TDBGridHack(DBGrid1).DefaultRowHeight;
+  // Check if the cell being drawn is in the same row as the selected cell
+  // All cells in the same row have the same Top coordinate
+  IsSelectedRow := (Rect.Top = SelectedCellRect.Top);
 
   // Highlight all cells in the selected row with light yellow
-  if DrawnGridRow = CurrentGridRow then
+  if IsSelectedRow then
   begin
     // Set background to light yellow
     DBGrid1.Canvas.Brush.Color := $00E0FFFF;  // Light yellow (BGR format)
@@ -435,6 +438,8 @@ begin
     // Remove the default selection state to prevent default blue highlighting
     if gdSelected in State then
       State := State - [gdSelected];
+    if gdFocused in State then
+      State := State - [gdFocused];
   end;
 
   // Draw the cell text with our custom colors
