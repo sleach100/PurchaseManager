@@ -372,6 +372,8 @@ begin
         begin
           // Successfully located - populate history for this product
           PopulateHistoryClick(Column);
+          // Force DBGrid1 to redraw with the new selection highlighted
+          DBGrid1.Invalidate;
           // Don't call SetFocus - let user stay in DBGrid3 to select other items
         end;
       end;
@@ -414,17 +416,26 @@ end;
 
 procedure TForm1.DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
   DataCol: Integer; Column: TColumn; State: TGridDrawState);
+var
+  IsSelectedRow: Boolean;
 begin
+  // Determine if this cell is in the selected row
+  // Since dgRowSelect is not enabled, gdSelected only applies to the focused cell
+  // gdFocused indicates cells in the row that has focus
+  IsSelectedRow := (gdSelected in State) or (gdFocused in State);
+
   // Highlight all cells in the selected row with light yellow
-  // Use gdSelected flag which reliably indicates the currently selected row
-  if gdSelected in State then
+  if IsSelectedRow then
   begin
     // Set background to light yellow
     DBGrid1.Canvas.Brush.Color := $00E0FFFF;  // Light yellow (BGR format)
     DBGrid1.Canvas.Font.Color := clBlack;
 
     // Remove the default selection state to prevent default blue highlighting
-    State := State - [gdSelected];
+    if gdSelected in State then
+      State := State - [gdSelected];
+    if gdFocused in State then
+      State := State - [gdFocused];
   end;
 
   // Draw the cell text with our custom colors
