@@ -20,6 +20,7 @@ uses
   public
     property ScrollBars;
     property Row;
+    property Col;
     property DefaultRowHeight;
   end;
 
@@ -420,8 +421,8 @@ var
   SelectedCellRect: TRect;
   IsSelectedRow: Boolean;
 begin
-  // Get the rectangle of the currently selected cell
-  SelectedCellRect := DBGrid1.CellRect(DBGrid1.Col, TDBGridHack(DBGrid1).Row);
+  // Get the rectangle of the currently selected cell using TDBGridHack to access protected members
+  SelectedCellRect := TDBGridHack(DBGrid1).CellRect(TDBGridHack(DBGrid1).Col, TDBGridHack(DBGrid1).Row);
 
   // Check if the cell being drawn is in the same row as the selected cell
   // All cells in the same row have the same Top coordinate
