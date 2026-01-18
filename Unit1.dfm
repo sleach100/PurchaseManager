@@ -621,6 +621,7 @@ object Form1: TForm1
     OnCellClick = DBGrid1CellClick
     OnColEnter = DBGrid1ColEnter
     OnColExit = DBGrid1ColExit
+    OnDrawColumnCell = DBGrid1DrawColumnCell
     OnExit = DBGrid1Exit
     OnKeyDown = DBGrid1KeyDown
     Columns = <

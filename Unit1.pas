@@ -19,6 +19,8 @@ uses
   TDBGridHack = class(TDBGrid)
   public
     property ScrollBars;
+    property Row;
+    property DefaultRowHeight;
   end;
 
   const
@@ -129,6 +131,8 @@ type
     procedure DBGrid1ColEnter(Sender: TObject);
     procedure DBGrid1ColExit(Sender: TObject);
     procedure DBGrid1Exit(Sender: TObject);
+    procedure DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
+      DataCol: Integer; Column: TColumn; State: TGridDrawState);
     procedure qPurchaseHistoryDateSetText(Sender: TField; const Text: string);
     procedure qPurchasesAfterOpen(DataSet: TDataSet);
     procedure qPurchasesDateSetText(Sender: TField; const Text: string);
@@ -406,6 +410,35 @@ end;
 procedure TForm1.DBGrid1Exit(Sender: TObject);
 begin
 HideDTP;
+end;
+
+procedure TForm1.DBGrid1DrawColumnCell(Sender: TObject; const Rect: TRect;
+  DataCol: Integer; Column: TColumn; State: TGridDrawState);
+var
+  CurrentGridRow: Integer;
+  DrawnGridRow: Integer;
+begin
+  // Get the current selected row (grid row, not data row)
+  CurrentGridRow := TDBGridHack(DBGrid1).Row;
+
+  // Calculate which grid row is being drawn
+  // This works by dividing the top position by row height
+  DrawnGridRow := Rect.Top div TDBGridHack(DBGrid1).DefaultRowHeight;
+
+  // Highlight all cells in the selected row with light yellow
+  if DrawnGridRow = CurrentGridRow then
+  begin
+    // Set background to light yellow
+    DBGrid1.Canvas.Brush.Color := $00E0FFFF;  // Light yellow (BGR format)
+    DBGrid1.Canvas.Font.Color := clBlack;
+
+    // Remove the default selection state to prevent default blue highlighting
+    if gdSelected in State then
+      State := State - [gdSelected];
+  end;
+
+  // Draw the cell text with our custom colors
+  DBGrid1.DefaultDrawColumnCell(Rect, DataCol, Column, State);
 end;
 
 procedure TForm1.DBGrid1KeyDown(Sender: TObject; var Key: Word; Shift: TShiftState);
