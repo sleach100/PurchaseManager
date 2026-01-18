@@ -368,7 +368,7 @@ begin
         begin
           // Successfully located - populate history for this product
           PopulateHistoryClick(Column);
-          DBGrid1.SetFocus;
+          // Don't call SetFocus - let user stay in DBGrid3 to select other items
         end;
       end;
     end;
