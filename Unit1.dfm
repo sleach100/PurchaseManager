@@ -998,7 +998,7 @@ object Form1: TForm1
     Left = 8
     Top = 296
     Width = 376
-    Height = 205
+    Height = 498
     DataSource = DataSource3
     ReadOnly = True
     TabOrder = 11
