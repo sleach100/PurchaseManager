@@ -20,6 +20,7 @@ uses
   public
     property ScrollBars;
     property Row;
+    property DefaultRowHeight;
   end;
 
   const
@@ -422,7 +423,7 @@ begin
 
   // Calculate which grid row is being drawn
   // This works by dividing the top position by row height
-  DrawnGridRow := Rect.Top div DBGrid1.DefaultRowHeight;
+  DrawnGridRow := Rect.Top div TDBGridHack(DBGrid1).DefaultRowHeight;
 
   // Highlight all cells in the selected row with light yellow
   if DrawnGridRow = CurrentGridRow then
